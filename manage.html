@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>wish manage</title><link rel="icon" href="wish.jpg"><link rel="manifest" href="manage.webmanifest"><meta name="apple-mobile-web-app-title" content="wish manage">
+<style>:root{color-scheme:light dark}body{font:16px system-ui;max-width:640px;margin:0 auto;padding:20px}input,button{font:inherit;padding:10px;margin:4px 0;border-radius:10px;border:1px solid #8a93ad;box-sizing:border-box}input{width:100%}button{cursor:pointer}.card{border:1px solid #8a93ad66;border-radius:14px;padding:12px;margin:10px 0}.pend{border:2px solid #536593}small{opacity:.7}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}</style></head><body>
+<h1>Manage notes</h1>
+<div id="login"><input id="em" type="email" placeholder="email" autocomplete="username"><input id="pw" type="password" placeholder="password" autocomplete="current-password"><button id="go">Sign in</button> <small id="err"></small></div>
+<div id="app" hidden><button id="out">Sign out</button> <button id="rf">Refresh</button><div class="card"><b>Notifications</b><p><small id="ns">Get a notification when someone taps “thinking of you”.</small></p><button id="en">Turn on for this device</button></div><p id="st"></p><div id="ls"></div></div>
+<script src="config.js"></script>
+<script>
+const G=window.GARDEN||{},$=i=>document.getElementById(i);let tok='';
+const fmt=d=>new Date(d+'T00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+async function api(p,o={}){const r=await fetch(G.url+p,{...o,headers:{apikey:G.key,Authorization:'Bearer '+(tok||G.key),'Content-Type':'application/json',...(o.headers||{})}});if(!r.ok)throw new Error(r.status);const t=await r.text();return t?JSON.parse(t):null}
+async function list(){const rows=await api('/rest/v1/garden_notes?select=*&order=approved.asc,created_at.desc');
+$('st').textContent=rows.filter(r=>!r.approved).length+' waiting · '+rows.filter(r=>r.approved).length+' visible';
+const ls=$('ls');ls.textContent='';
+rows.forEach(r=>{const d=document.createElement('div');d.className='card'+(r.approved?'':' pend');
+const p=document.createElement('div');p.textContent=r.body;
+const s=document.createElement('small');s.textContent=fmt(r.day)+(r.name?' · '+r.name:'')+(r.approved?' · visible':' · waiting');
+const b=document.createElement('div');b.className='row';
+const mk=(t,f)=>{const u=document.createElement('button');u.textContent=t;u.onclick=async()=>{try{await f();list()}catch(e){alert('Failed: '+e.message)}};b.append(u)};
+mk(r.approved?'Hide':'Approve',()=>api('/rest/v1/garden_notes?id=eq.'+r.id,{method:'PATCH',body:JSON.stringify({approved:!r.approved})}));
+mk('Delete',()=>confirm('Delete this note?')?api('/rest/v1/garden_notes?id=eq.'+r.id,{method:'DELETE'}):Promise.resolve());
+d.append(p,s,b);ls.append(d)})}
+$('go').onclick=async()=>{try{const r=await fetch(G.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:G.key,'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});if(!r.ok)throw 0;tok=(await r.json()).access_token;$('login').hidden=true;$('app').hidden=false;$('pw').value='';list()}catch(e){$('err').textContent='Sign in failed. Check the email and password.'}};
+$('out').onclick=()=>{tok='';$('app').hidden=true;$('login').hidden=false};$('rf').onclick=list;
+const dk=s=>{const p='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))};
+$('en').onclick=async()=>{const n=$('ns');try{
+if(!G.vapid)throw Error('Add the VAPID public key to config.js first.');
+if(!('serviceWorker' in navigator&&'PushManager' in window))throw Error('This browser cannot do push. On iPhone, add this page to the Home Screen and open it from there.');
+if(await Notification.requestPermission()!=='granted')throw Error('Notification permission was not granted.');
+const reg=await navigator.serviceWorker.register('./service-worker.js');await navigator.serviceWorker.ready;
+const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:dk(G.vapid)});
+const r=await fetch(G.url+'/functions/v1/wish-ping',{method:'POST',headers:{apikey:G.key,Authorization:'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({action:'subscribe',subscription:sub.toJSON()})});
+if(!r.ok)throw Error((await r.json().catch(()=>({}))).error||'Could not save this device.');
+n.textContent='On. This device gets a notification when someone sends “thinking of you”.'}catch(e){n.textContent=e.message}};
+if(!G.url)$('login').textContent='Add your Supabase URL and anon key to config.js first.';
+</script></body></html>

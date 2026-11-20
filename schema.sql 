@@ -1,0 +1,23 @@
+-- Wish Garden notes. Run once in the archive project: Supabase > SQL Editor.
+create table if not exists public.garden_notes(
+  id uuid primary key default gen_random_uuid(),
+  body text not null check (char_length(body) between 1 and 280),
+  name text check (char_length(name) <= 40),
+  day date not null default current_date,
+  approved boolean not null default false,
+  created_at timestamptz not null default now());
+alter table public.garden_notes enable row level security;
+drop policy if exists "Public can read approved garden notes" on public.garden_notes;
+create policy "Public can read approved garden notes" on public.garden_notes for select to anon using (approved = true);
+drop policy if exists "Visitors can add garden notes" on public.garden_notes;
+create policy "Visitors can add garden notes" on public.garden_notes for insert to anon with check (approved = false);
+drop policy if exists "Admins manage garden notes" on public.garden_notes;
+create policy "Admins manage garden notes" on public.garden_notes for all to authenticated using (true) with check (true);
+grant select, insert on public.garden_notes to anon;
+grant all on public.garden_notes to authenticated;
+
+-- Notifications for "thinking of you". No policies on purpose: only the wish-ping function (service role) touches these.
+create table if not exists public.garden_push(endpoint text primary key, sub jsonb not null, created_at timestamptz not null default now());
+create table if not exists public.garden_pings(id uuid primary key default gen_random_uuid(), name text, created_at timestamptz not null default now());
+alter table public.garden_push enable row level security;
+alter table public.garden_pings enable row level security;
