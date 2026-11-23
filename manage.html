@@ -1,35 +1,368 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>wish manage</title><link rel="icon" href="wish.jpg"><link rel="manifest" href="manage.webmanifest"><meta name="apple-mobile-web-app-title" content="wish manage">
-<style>:root{color-scheme:light dark}body{font:16px system-ui;max-width:640px;margin:0 auto;padding:20px}input,button{font:inherit;padding:10px;margin:4px 0;border-radius:10px;border:1px solid #8a93ad;box-sizing:border-box}input{width:100%}button{cursor:pointer}.card{border:1px solid #8a93ad66;border-radius:14px;padding:12px;margin:10px 0}.pend{border:2px solid #536593}small{opacity:.7}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}</style></head><body>
-<h1>Manage notes</h1>
-<div id="login"><input id="em" type="email" placeholder="email" autocomplete="username"><input id="pw" type="password" placeholder="password" autocomplete="current-password"><button id="go">Sign in</button> <small id="err"></small></div>
-<div id="app" hidden><button id="out">Sign out</button> <button id="rf">Refresh</button><div class="card"><b>Notifications</b><p><small id="ns">Get a notification when someone taps “thinking of you”.</small></p><button id="en">Turn on for this device</button></div><p id="st"></p><div id="ls"></div></div>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14246e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="wish">
+<title>wish</title>
+<link rel="icon" href="wish.jpg">
+<link rel="manifest" href="wish.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#fff;
+  --ink-dim:rgba(255,255,255,.66);
+  --ink-faint:rgba(255,255,255,.4);
+  --glass:rgba(255,255,255,.075);
+  --glass-strong:rgba(255,255,255,.14);
+  --line:rgba(255,255,255,.16);
+  --blue:#2a5cff;
+  --navy:#0d1750;
+  --serif:"Instrument Serif","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--navy);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+/* ---------- atmosphere ---------- */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(180deg,#3a6dff 0%,#2a52e6 28%,#1a2f9e 62%,#0d1750 100%)}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.75;will-change:transform}
+.b1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;background:#7aa2ff;animation:drift1 26s ease-in-out infinite alternate}
+.b2{width:60vmax;height:60vmax;right:-30vmax;top:30vh;background:#6a4cff;opacity:.55;animation:drift2 32s ease-in-out infinite alternate}
+.b3{width:55vmax;height:55vmax;left:-20vmax;bottom:-35vmax;background:#ff9ec0;opacity:.35;animation:drift3 30s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate3d(14vmax,10vmax,0) scale(1.1)}}
+@keyframes drift2{to{transform:translate3d(-16vmax,-8vmax,0) scale(.92)}}
+@keyframes drift3{to{transform:translate3d(18vmax,-10vmax,0) scale(1.15)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+
+.bell{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);transition:background .4s var(--ease),transform .4s var(--ease)}
+.bell[hidden]{display:none}
+.bell:active{transform:scale(.92)}
+.bell svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.8;transition:all .4s}
+.bell.on{background:#fff}
+.bell.on svg{stroke:#142a9c;fill:#142a9c;opacity:1}
+
+/* ---------- shell ---------- */
+#app{position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;max-width:560px;margin:0 auto}
+header{flex:none;padding:calc(var(--sat) + 18px) 26px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header .date{margin-left:auto}
+.mark{font-family:var(--serif);font-size:30px;letter-spacing:-.01em;font-style:italic}
+.date{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+
+.tabs{flex:none;position:relative;display:grid;grid-template-columns:1fr 1fr;margin:20px 26px 0;padding:4px;border-radius:999px;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%)}
+.tabs button{position:relative;z-index:1;padding:11px 8px;font-size:13.5px;font-weight:500;letter-spacing:.01em;color:var(--ink-dim);transition:color .4s var(--ease)}
+.tabs button[aria-selected="true"]{color:#142a9c}
+.pill{position:absolute;z-index:0;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:999px;background:#fff;box-shadow:0 6px 20px rgba(8,16,70,.28);transition:transform .6s var(--ease)}
+.tabs[data-i="1"] .pill{transform:translateX(100%)}
+
+.stage{position:relative;flex:1;min-height:0}
+.panel{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateY(14px) scale(.985);pointer-events:none;transition:opacity .55s var(--ease),transform .7s var(--ease);visibility:hidden}
+.panel.on{opacity:1;transform:none;pointer-events:auto;visibility:visible}
+
+/* ---------- ping ---------- */
+#p-ping{align-items:center;justify-content:center;text-align:center;padding:0 26px calc(var(--sab) + 40px)}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:10px}
+.big{font-family:var(--serif);font-size:clamp(46px,13vw,66px);line-height:.98;letter-spacing:-.02em;margin-bottom:38px}
+.big em{font-style:italic;color:#d9e4ff}
+.orbwrap{position:relative;width:min(58vw,224px);aspect-ratio:1;display:grid;place-items:center}
+.ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.35);animation:ring 5.4s var(--ease) infinite;opacity:0}
+.ring:nth-child(2){animation-delay:1.8s}
+.ring:nth-child(3){animation-delay:3.6s}
+@keyframes ring{0%{transform:scale(.9);opacity:.0}15%{opacity:.5}100%{transform:scale(1.9);opacity:0}}
+.orb{position:relative;width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(120% 120% at 30% 18%,#fff 0%,#e6eeff 34%,#9db9ff 100%);
+  box-shadow:0 40px 90px rgba(6,14,80,.55),0 0 0 1px rgba(255,255,255,.5) inset,0 -16px 36px rgba(42,92,255,.35) inset,0 8px 16px #fff inset;
+  animation:breathe 5.4s ease-in-out infinite;transition:transform .5s var(--ease),filter .6s var(--ease)}
+@keyframes breathe{50%{transform:scale(1.04)}}
+.orb:active{transform:scale(.94);animation:none}
+.orb svg{width:38%;height:38%;fill:#2a5cff;filter:drop-shadow(0 6px 10px rgba(42,92,255,.35));transition:transform .6s var(--ease)}
+.orb.sent svg{animation:beat .9s var(--ease)}
+@keyframes beat{0%{transform:scale(1)}30%{transform:scale(1.4)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+.orb[aria-disabled="true"]{filter:saturate(.5) brightness(.9);animation:none}
+.burst{position:absolute;inset:0;border-radius:50%;border:2px solid #fff;pointer-events:none;animation:burst 1.2s var(--ease) forwards}
+@keyframes burst{from{transform:scale(1);opacity:.9}to{transform:scale(2.6);opacity:0}}
+.status{margin-top:44px;min-height:22px;font-size:14.5px;color:var(--ink-dim);transition:opacity .4s}
+.who{margin-top:18px;width:min(78%,260px)}
+.who input{width:100%;text-align:center;padding:12px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:16px;outline:none;transition:border-color .3s,background .3s;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.who input::placeholder{color:var(--ink-faint)}
+.who input:focus{border-color:rgba(255,255,255,.55);background:var(--glass-strong)}
+
+/* ---------- notes ---------- */
+#p-notes{padding:0}
+.nhead{flex:none;padding:26px 26px 6px}
+.nhead h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,11vw,52px);line-height:1;letter-spacing:-.02em}
+.nhead h1 em{font-style:italic;color:#d9e4ff}
+.nhead p{margin-top:10px;font-size:14px;color:var(--ink-dim)}
+.scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 26px calc(var(--sab) + 120px);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 90px),transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 18px,#000 calc(100% - 90px),transparent 100%);scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.note{padding:22px 22px 18px;margin:0 0 14px;border-radius:24px;background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(26px) saturate(140%);backdrop-filter:blur(26px) saturate(140%);box-shadow:0 18px 40px rgba(6,14,80,.18);
+  opacity:0;transform:translateY(18px);animation:rise .9s var(--ease) forwards;animation-delay:calc(var(--n,0)*70ms)}
+@keyframes rise{to{opacity:1;transform:none}}
+.note q{display:block;quotes:none;font-family:var(--serif);font-size:25px;line-height:1.22;letter-spacing:-.005em;white-space:pre-wrap;overflow-wrap:anywhere}
+.note small{display:block;margin-top:14px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.skel{height:104px;border-radius:24px;margin-bottom:14px;background:linear-gradient(100deg,rgba(255,255,255,.05) 20%,rgba(255,255,255,.14) 40%,rgba(255,255,255,.05) 60%);background-size:220% 100%;animation:sh 1.6s linear infinite}
+@keyframes sh{to{background-position:-120% 0}}
+.empty{padding:36px 8px;text-align:center;color:var(--ink-dim);font-size:15px;line-height:1.6}
+.empty b{display:block;font-family:var(--serif);font-weight:400;font-style:italic;font-size:30px;color:#fff;margin-bottom:6px}
+.empty button{margin-top:14px;text-decoration:underline;text-underline-offset:4px;color:#fff}
+
+.fab{position:absolute;left:50%;bottom:calc(var(--sab) + 26px);transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;padding:0 26px;height:56px;border-radius:999px;background:#fff;color:#142a9c;font-weight:600;font-size:15px;letter-spacing:.01em;box-shadow:0 20px 44px rgba(6,14,80,.4);transition:transform .5s var(--ease),box-shadow .5s var(--ease)}
+.fab:hover{transform:translateX(-50%) translateY(-2px)}
+.fab:active{transform:translateX(-50%) scale(.96)}
+.fab svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+
+/* ---------- sheet ---------- */
+dialog{border:0;background:none;color:inherit;margin:auto auto 0;width:min(100%,560px);max-width:100%;padding:0;overflow:visible}
+dialog::backdrop{background:rgba(6,10,50,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;transition:opacity .5s var(--ease),display .5s allow-discrete,overlay .5s allow-discrete}
+dialog[open]::backdrop{opacity:1}
+@starting-style{dialog[open]::backdrop{opacity:0}}
+.sheet{padding:10px 22px calc(var(--sab) + 22px);border-radius:32px 32px 0 0;background:linear-gradient(180deg,rgba(40,70,200,.82),rgba(18,32,120,.94));border:1px solid var(--line);border-bottom:0;-webkit-backdrop-filter:blur(40px) saturate(150%);backdrop-filter:blur(40px) saturate(150%);box-shadow:0 -30px 80px rgba(4,8,50,.5);
+  transform:translateY(100%);transition:transform .7s var(--ease)}
+dialog[open] .sheet{transform:none}
+@starting-style{dialog[open] .sheet{transform:translateY(100%)}}
+.grab{width:42px;height:4px;border-radius:4px;background:rgba(255,255,255,.3);margin:4px auto 20px}
+.sheet h2{font-family:var(--serif);font-weight:400;font-size:32px;line-height:1.05;letter-spacing:-.015em}
+.sheet h2 em{font-style:italic;color:#d9e4ff}
+.sheet textarea,.sheet input{width:100%;margin-top:14px;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:16px;outline:none;resize:none;transition:border-color .3s,background .3s}
+.sheet textarea{min-height:128px;line-height:1.45;font-family:var(--serif);font-size:21px}
+.sheet textarea:focus,.sheet input:focus{border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.15)}
+.sheet ::placeholder{color:var(--ink-faint)}
+.meta{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--ink-faint)}
+.acts{display:flex;gap:10px;margin-top:18px}
+.acts button{flex:1;height:54px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .4s var(--ease),opacity .3s}
+.acts button:active{transform:scale(.97)}
+.ghost{background:var(--glass-strong);border:1px solid var(--line)}
+.solid{background:#fff;color:#142a9c;flex:1.6!important}
+.solid:disabled{opacity:.5}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;z-index:200;left:50%;top:calc(var(--sat) + 16px);transform:translate(-50%,-24px);padding:13px 22px;border-radius:999px;background:rgba(255,255,255,.94);color:#142a9c;font-size:14px;font-weight:500;box-shadow:0 16px 40px rgba(6,14,80,.35);opacity:0;pointer-events:none;transition:transform .6s var(--ease),opacity .4s;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+  .note{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div id="app">
+  <header>
+    <span class="mark">wish</span>
+    <span class="date" id="date"></span>
+    <button class="bell" id="bell" aria-label="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.500 7.500 2.500 7.500h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0"/></svg></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" data-i="0">
+    <span class="pill" aria-hidden="true"></span>
+    <button role="tab" id="t0" aria-selected="true" aria-controls="p-ping">thinking of you</button>
+    <button role="tab" id="t1" aria-selected="false" aria-controls="p-notes">dumb things</button>
+  </nav>
+
+  <div class="stage">
+    <!-- PING -->
+    <section class="panel on" id="p-ping" role="tabpanel" aria-labelledby="t0">
+      <p class="eyebrow">no words needed</p>
+      <h1 class="big">thinking <em>of you</em></h1>
+      <div class="orbwrap">
+        <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+        <button class="orb" id="orb" aria-label="Send thinking of you">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-4.9-9.8-10C1 7.6 3.1 4.5 6.3 4.5c2 0 3.7 1.1 5.7 3.2 2-2.1 3.7-3.2 5.7-3.2 3.2 0 5.3 3.1 4.1 6.5C20 16.1 12 21 12 21z"/></svg>
+        </button>
+      </div>
+      <p class="status" id="status" aria-live="polite">tap, and they'll feel it</p>
+      <label class="who"><input id="who" maxlength="40" placeholder="your name (optional)" autocomplete="given-name" enterkeyhint="done"></label>
+    </section>
+
+    <!-- NOTES -->
+    <section class="panel" id="p-notes" role="tabpanel" aria-labelledby="t1">
+      <div class="nhead">
+        <h1>things i thought<br>were <em>dumb</em> to say</h1>
+        <p>small, silly, and true.</p>
+      </div>
+      <div class="scroll" id="scroll"><div id="list"></div></div>
+      <button class="fab" id="add"><svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg>write one</button>
+    </section>
+  </div>
+</div>
+
+<dialog id="sheet" aria-labelledby="sh">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2 id="sh">something i thought was <em>dumb</em> to say</h2>
+    <textarea id="body" maxlength="280" placeholder="it's okay, say it…"></textarea>
+    <div class="meta"><span>It appears once it's approved.</span><span id="count">0 / 280</span></div>
+    <input id="nm" maxlength="40" placeholder="your name (optional)" autocomplete="given-name">
+    <div class="acts">
+      <button class="ghost" id="cancel" type="button">Cancel</button>
+      <button class="solid" id="send" type="button" disabled>Send it</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script src="config.js"></script>
 <script>
-const G=window.GARDEN||{},$=i=>document.getElementById(i);let tok='';
-const fmt=d=>new Date(d+'T00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
-async function api(p,o={}){const r=await fetch(G.url+p,{...o,headers:{apikey:G.key,Authorization:'Bearer '+(tok||G.key),'Content-Type':'application/json',...(o.headers||{})}});if(!r.ok)throw new Error(r.status);const t=await r.text();return t?JSON.parse(t):null}
-async function list(){const rows=await api('/rest/v1/garden_notes?select=*&order=approved.asc,created_at.desc');
-$('st').textContent=rows.filter(r=>!r.approved).length+' waiting · '+rows.filter(r=>r.approved).length+' visible';
-const ls=$('ls');ls.textContent='';
-rows.forEach(r=>{const d=document.createElement('div');d.className='card'+(r.approved?'':' pend');
-const p=document.createElement('div');p.textContent=r.body;
-const s=document.createElement('small');s.textContent=fmt(r.day)+(r.name?' · '+r.name:'')+(r.approved?' · visible':' · waiting');
-const b=document.createElement('div');b.className='row';
-const mk=(t,f)=>{const u=document.createElement('button');u.textContent=t;u.onclick=async()=>{try{await f();list()}catch(e){alert('Failed: '+e.message)}};b.append(u)};
-mk(r.approved?'Hide':'Approve',()=>api('/rest/v1/garden_notes?id=eq.'+r.id,{method:'PATCH',body:JSON.stringify({approved:!r.approved})}));
-mk('Delete',()=>confirm('Delete this note?')?api('/rest/v1/garden_notes?id=eq.'+r.id,{method:'DELETE'}):Promise.resolve());
-d.append(p,s,b);ls.append(d)})}
-$('go').onclick=async()=>{try{const r=await fetch(G.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:G.key,'Content-Type':'application/json'},body:JSON.stringify({email:$('em').value,password:$('pw').value})});if(!r.ok)throw 0;tok=(await r.json()).access_token;$('login').hidden=true;$('app').hidden=false;$('pw').value='';list()}catch(e){$('err').textContent='Sign in failed. Check the email and password.'}};
-$('out').onclick=()=>{tok='';$('app').hidden=true;$('login').hidden=false};$('rf').onclick=list;
-const dk=s=>{const p='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))};
-$('en').onclick=async()=>{const n=$('ns');try{
-if(!G.vapid)throw Error('Add the VAPID public key to config.js first.');
-if(!('serviceWorker' in navigator&&'PushManager' in window))throw Error('This browser cannot do push. On iPhone, add this page to the Home Screen and open it from there.');
-if(await Notification.requestPermission()!=='granted')throw Error('Notification permission was not granted.');
-const reg=await navigator.serviceWorker.register('./service-worker.js');await navigator.serviceWorker.ready;
-const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:dk(G.vapid)});
-const r=await fetch(G.url+'/functions/v1/wish-ping',{method:'POST',headers:{apikey:G.key,Authorization:'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({action:'subscribe',subscription:sub.toJSON()})});
-if(!r.ok)throw Error((await r.json().catch(()=>({}))).error||'Could not save this device.');
-n.textContent='On. This device gets a notification when someone sends “thinking of you”.'}catch(e){n.textContent=e.message}};
-if(!G.url)$('login').textContent='Add your Supabase URL and anon key to config.js first.';
-</script></body></html>
+(()=>{
+const G=window.GARDEN||{};
+const $=id=>document.getElementById(id);
+const H={apikey:G.key,Authorization:'Bearer '+G.key,'Content-Type':'application/json'};
+const COOLDOWN=30000;
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(_){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}}};
+
+/* ---- date ---- */
+$('date').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+
+/* ---- toast ---- */
+let tt;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2800)}
+
+/* ---- tabs ---- */
+const tabs=$('tabs'),btns=[$('t0'),$('t1')],panels=[$('p-ping'),$('p-notes')];
+function show(i){
+  tabs.dataset.i=i;
+  btns.forEach((b,k)=>b.setAttribute('aria-selected',k===i));
+  panels.forEach((p,k)=>{p.classList.toggle('on',k===i);k===i?p.removeAttribute('inert'):p.setAttribute('inert','')});
+  if(i===1&&!loaded)loadNotes();
+  history.replaceState(null,'',i?'#notes':'#');
+}
+btns.forEach((b,i)=>b.onclick=()=>show(i));
+panels[1].setAttribute('inert','');
+
+/* ---- ping ---- */
+const orb=$('orb'),status=$('status'),who=$('who');
+who.value=ls.get('wish.name')||'';
+who.addEventListener('change',()=>ls.set('wish.name',who.value.trim()));
+let timer;
+function cooling(){
+  clearInterval(timer);
+  const tick=()=>{
+    const left=Math.ceil((+ls.get('wish.last')+COOLDOWN-Date.now())/1000);
+    if(left>0){orb.setAttribute('aria-disabled','true');status.textContent='sent · again in '+left+'s'}
+    else{clearInterval(timer);orb.removeAttribute('aria-disabled');status.textContent="tap, and they'll feel it"}
+  };
+  tick();timer=setInterval(tick,500);
+}
+if(+ls.get('wish.last')+COOLDOWN>Date.now())cooling();
+
+orb.onclick=async()=>{
+  if(orb.getAttribute('aria-disabled')==='true'){toast('Give it a moment ♡');return}
+  if(!G.url){toast('Add your Supabase URL to config.js');return}
+  const name=who.value.trim();ls.set('wish.name',name);
+  // optimistic feel
+  const b=document.createElement('span');b.className='burst';orb.parentNode.appendChild(b);setTimeout(()=>b.remove(),1300);
+  orb.classList.remove('sent');void orb.offsetWidth;orb.classList.add('sent');
+  if(navigator.vibrate)navigator.vibrate([18,60,18]);
+  status.textContent='sending…';
+  try{
+    const r=await fetch(G.url+'/functions/v1/wish-ping',{method:'POST',headers:H,body:JSON.stringify({action:'ping',name})});
+    if(!r.ok)throw 0;
+    ls.set('wish.last',Date.now());cooling();toast('Sent. They’ll know you were thinking of them.');
+  }catch(_){
+    status.textContent="couldn't send · try again";toast('Couldn’t send that one. Try again.');
+  }
+};
+
+/* ---- notes ---- */
+let loaded=false;
+const list=$('list');
+const fmt=d=>{try{return new Date(d+'T00:00').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}catch(_){return d}};
+function skeleton(){list.innerHTML='<div class="skel"></div><div class="skel" style="opacity:.7"></div><div class="skel" style="opacity:.4"></div>'}
+function empty(msg,retry){
+  list.innerHTML='';
+  const d=document.createElement('div');d.className='empty';
+  d.innerHTML='<b></b><span></span>';d.firstChild.textContent=msg[0];d.lastChild.textContent=msg[1];
+  if(retry){const r=document.createElement('button');r.textContent=retry.label;r.onclick=retry.fn;d.append(document.createElement('br'),r)}
+  list.append(d);
+}
+async function loadNotes(){
+  if(!G.url){empty(['not connected','Add your Supabase URL and key to config.js.']);return}
+  skeleton();
+  try{
+    const r=await fetch(G.url+'/rest/v1/garden_notes?select=id,body,name,day&approved=eq.true&order=created_at.desc&limit=100',{headers:H});
+    if(!r.ok)throw 0;
+    const rows=await r.json();loaded=true;
+    if(!rows.length){empty(['nothing yet','Be the first to say something small and silly.'],{label:'write one',fn:openSheet});return}
+    list.innerHTML='';
+    rows.forEach((n,i)=>{
+      const c=document.createElement('article');c.className='note';c.style.setProperty('--n',Math.min(i,10));
+      const q=document.createElement('q');q.textContent=n.body;
+      const s=document.createElement('small');s.textContent=fmt(n.day)+(n.name?'  ·  '+n.name:'');
+      c.append(q,s);list.append(c);
+    });
+  }catch(_){empty(['couldn’t load','Check your connection and try again.'],{label:'retry',fn:loadNotes})}
+}
+
+/* ---- sheet ---- */
+const sheet=$('sheet'),body=$('body'),send=$('send'),nm=$('nm');
+function openSheet(){nm.value=ls.get('wish.name')||'';sheet.showModal();setTimeout(()=>body.focus(),250)}
+function closeSheet(){sheet.close()}
+$('add').onclick=openSheet;$('cancel').onclick=closeSheet;
+sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
+body.addEventListener('input',()=>{$('count').textContent=body.value.length+' / 280';send.disabled=!body.value.trim()});
+send.onclick=async()=>{
+  const text=body.value.trim();if(!text)return;
+  if(!G.url){toast('Add your Supabase URL to config.js');return}
+  send.disabled=true;send.textContent='Sending…';
+  try{
+    const name=nm.value.trim();ls.set('wish.name',name);
+    const r=await fetch(G.url+'/rest/v1/garden_notes',{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify({body:text,name:name||null})});
+    if(!r.ok)throw 0;
+    body.value='';$('count').textContent='0 / 280';closeSheet();toast('Sent. It’ll show up once it’s approved.');
+  }catch(_){toast('Couldn’t send. Try again.');send.disabled=false}
+  send.textContent='Send it';
+};
+
+/* ---- keyboard: left/right switch tabs when not typing ---- */
+addEventListener('keydown',e=>{
+  if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)||sheet.open)return;
+  if(e.key==='ArrowRight')show(1);if(e.key==='ArrowLeft')show(0);
+});
+
+
+/* ---- notifications (anyone can turn them on from the bell) ---- */
+const bell=$('bell');
+const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const b64=s=>{const p='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))};
+async function currentSub(){try{const reg=await navigator.serviceWorker.getRegistration('./');return reg?await reg.pushManager.getSubscription():null}catch(_){return null}}
+async function paintBell(){const s=supported&&Notification.permission==='granted'?await currentSub():null;bell.classList.toggle('on',!!s);bell.title=s?'Notifications on':'Turn on notifications'}
+paintBell();
+bell.onclick=async()=>{
+  try{
+    if(!G.vapid)throw Error('Add the VAPID public key to config.js');
+    if(!supported)throw Error('On iPhone: Share → Add to Home Screen, then open wish from there');
+    if(Notification.permission==='denied')throw Error('Notifications are blocked in this browser’s settings');
+    if(await Notification.requestPermission()!=='granted')throw Error('Notifications weren’t allowed');
+    const reg=await navigator.serviceWorker.register('./service-worker.js');await navigator.serviceWorker.ready;
+    const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(G.vapid)});
+    const r=await fetch(G.url+'/functions/v1/wish-ping',{method:'POST',headers:H,body:JSON.stringify({action:'subscribe',subscription:sub.toJSON()})});
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw Error(j.error||'The server wouldn’t save this device ('+r.status+')')}
+    paintBell();toast('Notifications on for this device ♡');
+  }catch(e){toast(e.message)}
+};
+
+if(location.hash==='#notes')show(1);
+
+/* ---- offline-friendly: register nothing here; service-worker.js is for the manage page ---- */
+})();
+</script>
+</body>
+</html>
