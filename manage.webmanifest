@@ -1,1 +1,1 @@
-{"name":"wish manage","short_name":"wish manage","start_url":"./manage.html","display":"standalone","background_color":"#ffffff","theme_color":"#536593","icons":[{"src":"wish.jpg","sizes":"any","type":"image/jpeg"}]}
+{"name":"wish","short_name":"wish","start_url":"./index.html","scope":"./","display":"standalone","background_color":"#0d1750","theme_color":"#14246e","icons":[{"src":"wish.jpg","sizes":"any","type":"image/jpeg"}]}
