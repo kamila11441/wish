@@ -99,6 +99,7 @@ header .date{margin-left:auto}
 @keyframes burst{from{transform:scale(1);opacity:.9}to{transform:scale(2.6);opacity:0}}
 .status{margin-top:44px;min-height:22px;font-size:14.5px;color:var(--ink-dim);transition:opacity .4s}
 .who{margin-top:18px;width:min(78%,260px)}
+.who2{margin-top:10px}
 .who input{width:100%;text-align:center;padding:12px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:16px;outline:none;transition:border-color .3s,background .3s;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
 .who input::placeholder{color:var(--ink-faint)}
 .who input:focus{border-color:rgba(255,255,255,.55);background:var(--glass-strong)}
@@ -191,7 +192,8 @@ dialog[open] .sheet{opacity:1;transform:none}
         </button>
       </div>
       <p class="status" id="status" aria-live="polite">tap, and they'll feel it</p>
-      <label class="who"><input id="who" maxlength="40" placeholder="your name (optional)" autocomplete="given-name" enterkeyhint="done"></label>
+      <label class="who"><input id="who" maxlength="40" placeholder="your name (optional)" autocomplete="given-name" enterkeyhint="next"></label>
+      <label class="who who2"><input id="msg" maxlength="100" placeholder="add a message (optional)" autocomplete="off" enterkeyhint="done"></label>
     </section>
 
     <!-- NOTES -->
@@ -283,7 +285,9 @@ orb.onclick=async()=>{
   status.textContent='sending…';
   try{
     let from=null;try{const s=supported?await currentSub():null;from=s?s.endpoint:null}catch(_){}
-    await fn({action:'ping',name,from});
+    const message=$('msg').value.trim();
+    await fn({action:'ping',name,from,message});
+    $('msg').value='';
     ls.set('wish.last',Date.now());cooling();toast('Sent. They’ll know you were thinking of them.');
   }catch(e){
     status.textContent="couldn't send · try again";toast(e.message)
@@ -307,7 +311,7 @@ async function loadNotes(){
   skeleton();
   try{
     const r=await fetch(G.url+'/rest/v1/garden_notes?select=id,body,name,day&approved=eq.true&order=created_at.desc&limit=100',{headers:H});
-    if(!r.ok)throw 0;
+    if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(_){}throw Error(r.status+(m?' · '+m:''))}
     const rows=await r.json();loaded=true;
     if(!rows.length){empty(['nothing yet','Be the first to say something small and silly.'],{label:'write one',fn:openSheet});return}
     list.innerHTML='';
@@ -317,7 +321,7 @@ async function loadNotes(){
       const s=document.createElement('small');s.textContent=fmt(n.day)+(n.name?'  ·  '+n.name:'');
       c.append(q,s);list.append(c);
     });
-  }catch(_){empty(['couldn’t load','Check your connection and try again.'],{label:'retry',fn:loadNotes})}
+  }catch(e){empty(['couldn’t load','Error: '+(e.message||'offline')],{label:'retry',fn:loadNotes})}
 }
 
 /* ---- sheet ---- */
@@ -374,4 +378,3 @@ if(location.hash==='#notes')show(1);
 </script>
 </body>
 </html>
-
